@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MYL Cement Tracker – Rural Development Department</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='20' font-size='20'>🏗️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Display:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<meta name="theme-color" content="#1a73e8">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen" class="login-wrap">
+  <div class="login-left">
+    <div class="login-left-logo">
+      <div class="logo-box"><span class="material-icons-round">business</span></div>
+      <div class="logo-text">MYL Cement Tracker<span>Rural Development Dept · Mayiladuthurai</span></div>
+    </div>
+    <h2>Cement Distribution<br>Management System</h2>
+    <p>A transparent, end-to-end digital platform for managing government cement issuance under rural housing schemes across Mayiladuthurai district.</p>
+    <div class="login-feat">
+      <div class="login-feat-item"><span class="material-icons-round">verified_user</span>Role-based access control for 6 user types</div>
+      <div class="login-feat-item"><span class="material-icons-round">add_a_photo</span>Mandatory photo + GPS proof at issuance</div>
+      <div class="login-feat-item"><span class="material-icons-round">balance</span>Automatic stock ledger debit on every issue</div>
+      <div class="login-feat-item"><span class="material-icons-round">cloud_sync</span>Firebase Firestore cloud sync (real-time)</div>
+    </div>
+    <div style="margin-top:48px;font-size:11px;color:rgba(255,255,255,.5)">
+      Rural Development Department · Mayiladuthurai District<br>
+      Powered by Digital District Initiative
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div id="roleDetected" style="display:none;align-items:center;gap:12px;background:var(--grey-50);border:1.5px solid var(--grey-200);border-radius:10px;padding:12px 16px;margin-bottom:20px">
+      <div id="rdAvatar" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span class="material-icons-round" id="rdIcon" style="font-size:22px;color:#fff"></span>
+      </div>
+      <div>
+        <div id="rdName" style="font-size:14px;font-weight:700"></div>
+        <div id="rdDesig" style="font-size:11px;color:var(--grey-500);margin-top:1px"></div>
+      </div>
+      <span class="role-badge" id="rdBadge" style="margin-left:auto"></span>
+    </div>
+
+    <h3>Welcome back</h3>
+    <p>Enter your credentials to access the system</p>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Username</label>
+      <input class="form-control" id="loginUser" placeholder="Your username"
+        autocomplete="username" oninput="Auth.onUsernameHint(this.value)"
+        onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    </div>
+
+    <div class="form-group" style="margin-bottom:6px">
+      <label class="form-label">Password</label>
+      <div style="position:relative">
+        <input class="form-control" type="password" id="loginPass" placeholder="Password"
+          autocomplete="current-password" style="padding-right:44px"
+          onkeydown="if(event.key==='Enter')Auth.login()">
+        <button onclick="Auth.togglePwd()" tabindex="-1"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--grey-500)">
+          <span class="material-icons-round" id="pwdEye">visibility</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="loginError" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--red);margin:8px 0 4px">
+      <span class="material-icons-round" style="font-size:16px">error_outline</span>
+      <span id="loginErrorMsg">Invalid username or password.</span>
+    </div>
+
+    <button class="btn btn-primary" id="loginBtn"
+      style="width:100%;justify-content:center;padding:13px;margin-top:12px;font-size:15px;border-radius:10px"
+      onclick="Auth.login()">
+      <span class="material-icons-round">login</span> Sign In
+    </button>
+
+    <div style="margin-top:24px;border-top:1px solid var(--grey-200);padding-top:14px">
+      <details style="font-size:11px;color:var(--grey-500)">
+        <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
+          <span class="material-icons-round" style="font-size:14px">info_outline</span>
+          Demo credentials
+        </summary>
+        <div style="margin-top:10px;background:var(--grey-50);border-radius:8px;padding:12px;font-size:11px;display:grid;grid-template-columns:auto 1fr 1fr;gap:5px 14px">
+          <strong style="grid-column:1/-1;font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--grey-700)">Role</strong>
+          <strong style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--grey-700)">Username</strong>
+          <strong style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--grey-700)">Password</strong>
+          <span>District Collector</span><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">collector</code><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">admin2025</code>
+          <span>BDO (MYL)</span><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">bdo.myl</code><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">bdo.myl2025</code>
+          <span>Store Keeper</span><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">store.myl</code><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">store.myl2025</code>
+          <span>Overseer</span><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">r.kayalvizhi</code><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">kayalvizhi2025</code>
+          <span>Engineer</span><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">engineer.myl</code><code style="background:#fff;padding:1px 6px;border-radius:4px;border:1px solid var(--grey-200)">eng.myl2025</code>
+        </div>
+      </details>
+      <div style="margin-top:10px;font-size:10px;color:var(--grey-500);text-align:center">
+        Rural Development Department · Mayiladuthurai District
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="mainApp" class="hidden">
+  <!-- Top App Bar -->
+  <div class="app-bar">
+    <div class="app-bar-left">
+      <button class="nav-icon-btn" onclick="UI.toggleSidebar()"><span class="material-icons-round">menu</span></button>
+      <div>
+        <h1>MYL Cement Tracker <span>Rural Development Dept · Mayiladuthurai</span></h1>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div id="apiStatus" style="font-size:11px;color:var(--grey-500);display:flex;align-items:center;gap:4px"></div>
+      <button class="nav-icon-btn" title="Alerts" onclick="Router.navigate('alerts')">
+        <span class="material-icons-round">notifications</span>
+        <span id="alertBadge" class="nav-badge" style="position:absolute;top:6px;right:6px;font-size:9px;min-width:16px;padding:1px 4px;display:none"></span>
+      </button>
+      <div class="chip-user" id="userChip" onclick="Auth.logout()">
+        <div class="avatar" id="avatarInitial">A</div>
+        <span id="userLabel">User</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout -->
+  <div class="layout">
+    <nav class="sidebar" id="sidebar">
+      <div id="sidebarContent"></div>
+    </nav>
+    <main class="main" id="mainContent">
+      <div class="empty-state"><span class="material-icons-round">hourglass_empty</span><p>Loading…</p></div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="UI.closeModalOutside(event)">
+  <div class="modal" id="modalBox">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="nav-icon-btn" style="color:var(--grey-700)" onclick="UI.closeModal()"><span class="material-icons-round">close</span></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="material-icons-round" id="toastIcon">check_circle</span>
+  <span id="toastMsg"></span>
+</div>
+
+<!-- Print Zone -->
+<div class="print-zone hidden" id="printZone"></div>
+
+<!-- CDN dependencies -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<!-- App modules (load order matters for globals) -->
+<script src="/js/config.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/exporter.js"></script>
+<script src="/js/pages/dashboard.js"></script>
+<script src="/js/pages/beneficiaries.js"></script>
+<script src="/js/pages/allotments.js"></script>
+<script src="/js/pages/issuance.js"></script>
+<script src="/js/pages/stock.js"></script>
+<script src="/js/pages/reports.js"></script>
+<script src="/js/pages/alerts.js"></script>
+<script src="/js/pages/upload.js"></script>
+<script src="/js/pages/settings.js"></script>
+<script src="/js/pages/users.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

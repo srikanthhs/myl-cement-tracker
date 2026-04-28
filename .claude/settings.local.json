@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"D:\\\\RD cement\\\\\")",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(cp .env.example .env)",
+      "Bash(node -e \"require\\('./backend/server.js'\\)\")",
+      "Bash(curl -s http://localhost:3000/api/auth/login -X POST -H 'Content-Type: application/json' -d '{\"username\":\"collector\",\"password\":\"admin2025\"}')",
+      "Bash(node backend/server.js)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"collector\",\"password\":\"admin2025\"}')",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('D:/RD cement/re cement/serviceAccountKey.json'\\)\\); print\\('type:', d.get\\('type'\\)\\); print\\('project_id:', d.get\\('project_id'\\)\\); print\\('client_email:', d.get\\('client_email',''\\)[:40]+'...'\\)\")",
+      "Bash(node -e \"const d=require\\('./serviceAccountKey.json'\\); console.log\\('type:',d.type\\); console.log\\('project_id:',d.project_id\\); console.log\\('client_email:',d.client_email?.slice\\(0,40\\)+'...'\\);\")",
+      "Bash(node -e \"const d=require\\('./serviceAccountKey.json'\\); console.log\\('type:',d.type\\); console.log\\('project_id:',d.project_id\\); console.log\\('client_email:',d.client_email?.slice\\(0,45\\)+'...'\\);\")",
+      "Bash(pkill -f \"node backend/server.js\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); console.log\\('Login status:', j.token?'✅ SUCCESS':'❌ FAILED'\\); if\\(j.user\\) console.log\\('User:', j.user.name, '| Role:', j.user.role\\);\")",
+      "Bash(curl -s http://localhost:3000/api/auth/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"username\\\\\":\\\\\"collector\\\\\",\\\\\"password\\\\\":\\\\\"admin123\\\\\"}\")",
+      "Read(//tmp/**)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /PID 25280 /F)",
+      "Bash(cmd /c \"taskkill /PID 25280 /F\")",
+      "Bash(wmic process *)",
+      "PowerShell(Stop-Process -Id 25280 -Force)",
+      "PowerShell(Test-NetConnection -ComputerName localhost -Port 3000 -InformationLevel Quiet)"
+    ]
+  }
+}
