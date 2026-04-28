@@ -1,21 +1,23 @@
 {
-  "_comment": "TNRD Download Schedule Configuration. Credentials come from env vars (TNRD_USERNAME, TNRD_PASSWORD). Update 'url' and field names to match the actual tnrd.tn.gov.in report pages.",
+  "_comment": "TNRD Download Schedule. Set TNRD_SESSION_COOKIE (preferred) or TNRD_USERNAME+TNRD_PASSWORD as env vars / GitHub Secrets.",
 
   "credentials": {
-    "_comment": "Leave blank — set TNRD_USERNAME and TNRD_PASSWORD as environment variables instead.",
+    "_comment": "Leave blank – use environment variables instead.",
     "username": "",
     "password": ""
   },
 
   "login": {
-    "url": "https://tnrd.tn.gov.in/Account/Login",
+    "url": "https://tnrd.tn.gov.in/project/logincheck.php?flag=1",
     "method": "POST",
-    "username_field": "UserName",
-    "password_field": "Password",
-    "fetch_csrf_first": true,
+    "multipart": true,
+    "username_field": "uname",
+    "password_field": "pwd",
+    "password_hash": "md5",
+    "fetch_csrf_first": false,
     "extra_fields": {},
-    "success_contains": "Dashboard",
-    "failure_contains": "Invalid"
+    "success_contains": "",
+    "failure_contains": "invalid"
   },
 
   "reports": [
@@ -23,12 +25,11 @@
       "id": "cement_allotment",
       "name": "Cement Allotment Report",
       "enabled": true,
-      "url": "https://tnrd.tn.gov.in/Reports/CementAllotmentReport",
+      "url": "https://tnrd.tn.gov.in/project/TODO_allotment_export_url",
       "method": "GET",
       "params": {
         "fromDate": "{today}",
-        "toDate": "{today}",
-        "district": "Mayiladuthurai"
+        "toDate": "{today}"
       },
       "form_data": {},
       "date_format": "%d-%m-%Y",
@@ -41,11 +42,10 @@
       "id": "cement_stock",
       "name": "Cement Stock Status",
       "enabled": true,
-      "url": "https://tnrd.tn.gov.in/Reports/StockReport",
+      "url": "https://tnrd.tn.gov.in/project/TODO_stock_export_url",
       "method": "GET",
       "params": {
-        "date": "{today}",
-        "district": "Mayiladuthurai"
+        "date": "{today}"
       },
       "form_data": {},
       "date_format": "%d-%m-%Y",
@@ -58,12 +58,9 @@
       "id": "beneficiary_list",
       "name": "Beneficiary List",
       "enabled": true,
-      "url": "https://tnrd.tn.gov.in/Reports/BeneficiaryReport",
+      "url": "https://tnrd.tn.gov.in/project/TODO_beneficiary_export_url",
       "method": "GET",
-      "params": {
-        "district": "Mayiladuthurai",
-        "scheme": "PMAY"
-      },
+      "params": {},
       "form_data": {},
       "date_format": "%d-%m-%Y",
       "sheet_name": 0,
@@ -75,13 +72,12 @@
       "id": "issuance_summary",
       "name": "Issuance Summary Report",
       "enabled": true,
-      "url": "https://tnrd.tn.gov.in/Reports/IssuanceSummary",
+      "url": "https://tnrd.tn.gov.in/project/TODO_issuance_export_url",
       "method": "POST",
       "params": {},
       "form_data": {
-        "FromDate": "{today}",
-        "ToDate": "{today}",
-        "DistrictCode": "MYL"
+        "fromDate": "{today}",
+        "toDate": "{today}"
       },
       "date_format": "%d-%m-%Y",
       "sheet_name": 0,
