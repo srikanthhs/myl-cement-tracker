@@ -1,0 +1,9 @@
+# TNRD Downloader – Python dependencies
+# Install with: pip install -r scripts/requirements.txt
+
+requests>=2.32.0
+schedule>=1.2.2
+pandas>=2.2.0
+openpyxl>=3.1.2          # xlsx read/write engine for pandas
+firebase-admin>=6.5.0
+numpy>=1.26.0

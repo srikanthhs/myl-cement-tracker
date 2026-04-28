@@ -60,18 +60,19 @@ const UI = (() => {
     issuance:     { label:'Cement Issuance',  icon:'output'            },
     stock:        { label:'Stock',            icon:'inventory_2'       },
     reports:      { label:'Reports',          icon:'bar_chart'         },
+    tnrd:         { label:'TNRD Portal',      icon:'cloud_download'    },
     alerts:       { label:'Alerts',           icon:'notifications'     },
     users:        { label:'Users & Perms',    icon:'manage_accounts'   },
     settings:     { label:'Settings',         icon:'settings'          },
   };
 
   const ROLE_PAGES = {
-    admin:    ['dashboard','masterupload','beneficiaries','allotments','issuance','stock','reports','alerts','users','settings'],
-    bdo:      ['dashboard','beneficiaries','allotments','stock','reports','alerts','settings'],
-    overseer: ['dashboard','allotments','beneficiaries','reports','alerts'],
+    admin:    ['dashboard','masterupload','beneficiaries','allotments','issuance','stock','reports','tnrd','alerts','users','settings'],
+    bdo:      ['dashboard','beneficiaries','allotments','stock','reports','tnrd','alerts','settings'],
+    overseer: ['dashboard','allotments','beneficiaries','reports','tnrd','alerts'],
     store:    ['dashboard','issuance','stock','alerts'],
     inspector:['dashboard','alerts'],
-    engineer: ['dashboard','allotments','stock','reports','beneficiaries','alerts'],
+    engineer: ['dashboard','allotments','stock','reports','tnrd','beneficiaries','alerts'],
   };
 
   function buildSidebar() {

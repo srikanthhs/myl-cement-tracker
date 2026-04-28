@@ -10,6 +10,7 @@ const Router = (() => {
     issuance:     () => Pages.Issuance.render(),
     stock:        () => Pages.Stock.render(),
     reports:      () => Pages.Reports.render(),
+    tnrd:         () => Pages.Tnrd.render(),
     alerts:       () => Pages.Alerts.render(),
     users:        () => Pages.Users.render(),
     settings:     () => Pages.Settings.render(),
@@ -55,6 +56,7 @@ const Pages = {
   Issuance:     typeof IssuancePage     !== 'undefined' ? IssuancePage     : null,
   Stock:        typeof StockPage        !== 'undefined' ? StockPage        : null,
   Reports:      typeof ReportsPage      !== 'undefined' ? ReportsPage      : null,
+  Tnrd:         typeof TnrdPage         !== 'undefined' ? TnrdPage         : null,
   Alerts:       typeof AlertsPage       !== 'undefined' ? AlertsPage       : null,
   Users:        typeof UsersPage        !== 'undefined' ? UsersPage        : null,
   Settings:     typeof SettingsPage     !== 'undefined' ? SettingsPage     : null,
@@ -92,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
   Pages.Issuance      = typeof IssuancePage      !== 'undefined' ? IssuancePage      : { render: () => {} };
   Pages.Stock         = typeof StockPage         !== 'undefined' ? StockPage         : { render: () => {} };
   Pages.Reports       = typeof ReportsPage       !== 'undefined' ? ReportsPage       : { render: () => {} };
+  Pages.Tnrd          = typeof TnrdPage          !== 'undefined' ? TnrdPage          : { render: () => {} };
   Pages.Alerts        = typeof AlertsPage        !== 'undefined' ? AlertsPage        : { render: () => {} };
   Pages.Users         = typeof UsersPage         !== 'undefined' ? UsersPage         : { render: () => {} };
   Pages.Settings      = typeof SettingsPage      !== 'undefined' ? SettingsPage      : { render: () => {} };

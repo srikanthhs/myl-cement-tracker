@@ -1,0 +1,66 @@
+name: TNRD Excel Downloader
+
+on:
+  # ── Scheduled runs (IST = UTC+5:30) ──────────────────────────────────────
+  # GitHub Actions cron uses UTC. Add 5h30m to get IST.
+  # 02:30 UTC = 08:00 IST   07:00 UTC = 12:30 IST   13:00 UTC = 18:30 IST
+  schedule:
+    - cron: '30 2 * * *'   # 08:00 IST – morning download
+    - cron: '0 7 * * *'    # 12:30 IST – midday download
+    - cron: '0 13 * * *'   # 18:30 IST – evening download
+
+  # ── Manual trigger with optional report ID ──────────────────────────────
+  workflow_dispatch:
+    inputs:
+      report_id:
+        description: 'Run a single report by ID (leave blank for all)'
+        required: false
+        default: ''
+
+jobs:
+  download:
+    name: Download TNRD Excel Reports
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run downloader – all reports
+        if: ${{ github.event.inputs.report_id == '' }}
+        env:
+          TNRD_USERNAME: ${{ secrets.TNRD_USERNAME }}
+          TNRD_PASSWORD: ${{ secrets.TNRD_PASSWORD }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          TNRD_SAVE_LOCAL: 'false'
+        run: python scripts/tnrd_downloader.py --now
+
+      - name: Run downloader – single report
+        if: ${{ github.event.inputs.report_id != '' }}
+        env:
+          TNRD_USERNAME: ${{ secrets.TNRD_USERNAME }}
+          TNRD_PASSWORD: ${{ secrets.TNRD_PASSWORD }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          TNRD_SAVE_LOCAL: 'false'
+        run: python scripts/tnrd_downloader.py --id "${{ github.event.inputs.report_id }}"
+
+      - name: Upload downloaded files as artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tnrd-debug-${{ github.run_number }}
+          path: scripts/downloaded_excels/
+          retention-days: 3

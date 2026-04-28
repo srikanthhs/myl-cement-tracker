@@ -63,6 +63,7 @@ app.use('/api/reports',       require('./routes/reports'));
 app.use('/api/users',         require('./routes/users'));
 app.use('/api/alerts',        require('./routes/alerts'));
 app.use('/api/upload',        require('./routes/upload'));
+app.use('/api/tnrd',          require('./routes/tnrd'));
 
 // ── Serve Frontend Static Files ──────────────────────────────────────────────
 const FRONTEND = path.join(__dirname, '..', 'frontend');

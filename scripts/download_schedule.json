@@ -1,0 +1,93 @@
+{
+  "_comment": "TNRD Download Schedule Configuration. Credentials come from env vars (TNRD_USERNAME, TNRD_PASSWORD). Update 'url' and field names to match the actual tnrd.tn.gov.in report pages.",
+
+  "credentials": {
+    "_comment": "Leave blank — set TNRD_USERNAME and TNRD_PASSWORD as environment variables instead.",
+    "username": "",
+    "password": ""
+  },
+
+  "login": {
+    "url": "https://tnrd.tn.gov.in/Account/Login",
+    "method": "POST",
+    "username_field": "UserName",
+    "password_field": "Password",
+    "fetch_csrf_first": true,
+    "extra_fields": {},
+    "success_contains": "Dashboard",
+    "failure_contains": "Invalid"
+  },
+
+  "reports": [
+    {
+      "id": "cement_allotment",
+      "name": "Cement Allotment Report",
+      "enabled": true,
+      "url": "https://tnrd.tn.gov.in/Reports/CementAllotmentReport",
+      "method": "GET",
+      "params": {
+        "fromDate": "{today}",
+        "toDate": "{today}",
+        "district": "Mayiladuthurai"
+      },
+      "form_data": {},
+      "date_format": "%d-%m-%Y",
+      "sheet_name": 0,
+      "header_row": 0,
+      "schedule_times": ["08:00", "14:00", "20:00"],
+      "firebase_collection": "tnrd_reports"
+    },
+    {
+      "id": "cement_stock",
+      "name": "Cement Stock Status",
+      "enabled": true,
+      "url": "https://tnrd.tn.gov.in/Reports/StockReport",
+      "method": "GET",
+      "params": {
+        "date": "{today}",
+        "district": "Mayiladuthurai"
+      },
+      "form_data": {},
+      "date_format": "%d-%m-%Y",
+      "sheet_name": 0,
+      "header_row": 0,
+      "schedule_times": ["09:00", "17:00"],
+      "firebase_collection": "tnrd_reports"
+    },
+    {
+      "id": "beneficiary_list",
+      "name": "Beneficiary List",
+      "enabled": true,
+      "url": "https://tnrd.tn.gov.in/Reports/BeneficiaryReport",
+      "method": "GET",
+      "params": {
+        "district": "Mayiladuthurai",
+        "scheme": "PMAY"
+      },
+      "form_data": {},
+      "date_format": "%d-%m-%Y",
+      "sheet_name": 0,
+      "header_row": 0,
+      "schedule_times": ["07:00"],
+      "firebase_collection": "tnrd_reports"
+    },
+    {
+      "id": "issuance_summary",
+      "name": "Issuance Summary Report",
+      "enabled": true,
+      "url": "https://tnrd.tn.gov.in/Reports/IssuanceSummary",
+      "method": "POST",
+      "params": {},
+      "form_data": {
+        "FromDate": "{today}",
+        "ToDate": "{today}",
+        "DistrictCode": "MYL"
+      },
+      "date_format": "%d-%m-%Y",
+      "sheet_name": 0,
+      "header_row": 0,
+      "schedule_times": ["08:30", "13:30", "18:30"],
+      "firebase_collection": "tnrd_reports"
+    }
+  ]
+}
