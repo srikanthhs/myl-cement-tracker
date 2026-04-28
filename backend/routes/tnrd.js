@@ -2,9 +2,10 @@
 const router = require('express').Router();
 const multer = require('multer');
 const XLSX   = require('xlsx');
-const { requireAuth } = require('../middleware/auth');
-const { allow }       = require('../middleware/rbac');
-const { getDb }       = require('../config/firebase');
+const { requireAuth }   = require('../middleware/auth');
+const { allow }         = require('../middleware/rbac');
+const { getDb }         = require('../config/firebase');
+const tnrdSvc           = require('../services/tnrd.service');
 
 const COLLECTION = 'tnrd_reports';
 
@@ -161,5 +162,41 @@ router.post('/upload/:id', requireAuth, allow('admin', 'bdo'),
     } catch (e) { next(e); }
   }
 );
+
+// ── POST /api/tnrd/fetch-all  ────────────────────────────────────────────────
+// One-click: backend downloads all reports using the provided session cookie.
+// Body: { sessionCookie: "PHPSESSID value" }
+router.post('/fetch-all', requireAuth, allow('admin', 'bdo'), async (req, res, next) => {
+  const { sessionCookie } = req.body;
+  if (!sessionCookie?.trim()) {
+    return res.status(400).json({ error: 'sessionCookie is required.' });
+  }
+
+  try {
+    let reportConfigs = [];
+    try {
+      reportConfigs = require('../../scripts/download_schedule.json').reports || [];
+    } catch {
+      return res.status(500).json({ error: 'download_schedule.json not found or invalid.' });
+    }
+
+    const results = await tnrdSvc.fetchAllReports(
+      sessionCookie.trim(),
+      reportConfigs,
+      req.user.name || req.user.username,
+    );
+
+    const anyExpired = results.some(r => r.error === 'Session expired');
+    const succeeded  = results.filter(r => r.status === 'success').length;
+
+    res.json({
+      message: anyExpired
+        ? 'Session expired — please log in again and retry.'
+        : `Downloaded ${succeeded} of ${reportConfigs.length} reports successfully.`,
+      results,
+      sessionExpired: anyExpired,
+    });
+  } catch (e) { next(e); }
+});
 
 module.exports = router;

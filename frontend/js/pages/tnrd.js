@@ -18,13 +18,20 @@ const TnrdPage = (() => {
           <div class="page-title">TNRD Portal Reports</div>
           <div class="page-sub">Upload Excel files downloaded from tnrd.tn.gov.in</div>
         </div>
-        <button class="btn btn-outlined btn-sm" onclick="TnrdPage.render()">
-          <span class="material-icons-round">refresh</span> Refresh
-        </button>
+        <div style="display:flex;gap:8px">
+          ${canUpload ? `
+          <button class="btn btn-primary btn-sm" onclick="TnrdPage.openFetchModal()">
+            <span class="material-icons-round">cloud_download</span> Fetch All from TNRD
+          </button>` : ''}
+          <button class="btn btn-outlined btn-sm" onclick="TnrdPage.render()">
+            <span class="material-icons-round">refresh</span> Refresh
+          </button>
+        </div>
       </div>
       <div id="tnrdBody">
         <div class="empty-state"><span class="material-icons-round spin">sync</span><p>Loading…</p></div>
-      </div>`;
+      </div>
+      ${_fetchAllModal()}`;
 
     try {
       const [cfg, reportsArr] = await Promise.all([
@@ -257,11 +264,121 @@ const TnrdPage = (() => {
     }]);
   }
 
+  // ── Fetch-all modal ───────────────────────────────────────────────────────
+  function _fetchAllModal() {
+    return `
+      <div id="tnrdFetchModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
+        <div class="card" style="width:min(480px,94vw);margin:0;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-weight:700;font-size:16px">
+              <span class="material-icons-round" style="vertical-align:middle;color:var(--blue)">cloud_download</span>
+              Fetch All Reports from TNRD
+            </div>
+            <button class="btn btn-text btn-sm" onclick="TnrdPage.closeFetchModal()">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+
+          <div style="background:var(--grey-50);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px">
+            <strong>How to get your session cookie:</strong>
+            <ol style="margin:8px 0 0;padding-left:18px;line-height:1.8">
+              <li>Log in to <strong>tnrd.tn.gov.in</strong></li>
+              <li>Press <strong>F12</strong> → Application → Cookies → tnrd.tn.gov.in</li>
+              <li>Find <strong>PHPSESSID</strong> and copy its value</li>
+              <li>Paste it below and click Fetch</li>
+            </ol>
+          </div>
+
+          <div class="form-group" style="margin-bottom:16px">
+            <label class="form-label">PHPSESSID Cookie Value</label>
+            <input class="form-control" id="tnrdCookieInput" placeholder="e.g. r1n4njiefl9jj411q8em69fv9o"
+              style="font-family:monospace;font-size:13px">
+          </div>
+
+          <div id="tnrdFetchProgress" style="display:none;margin-bottom:12px"></div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-outlined btn-sm" onclick="TnrdPage.closeFetchModal()">Cancel</button>
+            <button class="btn btn-primary btn-sm" id="tnrdFetchBtn" onclick="TnrdPage.doFetchAll()">
+              <span class="material-icons-round">cloud_download</span> Fetch All Reports
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function openFetchModal() {
+    const modal = document.getElementById('tnrdFetchModal');
+    if (modal) { modal.style.display = 'flex'; }
+    // Re-insert modal if page was re-rendered
+    else {
+      document.getElementById('mainContent').insertAdjacentHTML('beforeend', _fetchAllModal());
+      document.getElementById('tnrdFetchModal').style.display = 'flex';
+    }
+    document.getElementById('tnrdFetchProgress').style.display = 'none';
+    setTimeout(() => document.getElementById('tnrdCookieInput')?.focus(), 50);
+  }
+
+  function closeFetchModal() {
+    const modal = document.getElementById('tnrdFetchModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async function doFetchAll() {
+    const cookie = document.getElementById('tnrdCookieInput')?.value?.trim();
+    if (!cookie) { UI.toast('Paste your PHPSESSID value first.', 'warn'); return; }
+
+    const btn      = document.getElementById('tnrdFetchBtn');
+    const progress = document.getElementById('tnrdFetchProgress');
+    btn.disabled   = true;
+    btn.innerHTML  = '<span class="material-icons-round spin">sync</span> Downloading…';
+    progress.style.display = 'block';
+    progress.innerHTML     = '<div class="empty-state" style="padding:12px"><span class="material-icons-round spin">sync</span><p style="margin:4px 0 0;font-size:13px">Contacting tnrd.tn.gov.in…</p></div>';
+
+    try {
+      const result = await API.post('/tnrd/fetch-all', { sessionCookie: cookie });
+
+      const rows = result.results.map(r => {
+        const icon  = r.status === 'success' ? '✓' : r.status === 'skipped' ? '—' : '✗';
+        const color = r.status === 'success' ? 'var(--green)' : r.status === 'skipped' ? 'var(--grey-400)' : 'var(--red)';
+        const detail = r.status === 'success' ? `${fmt(r.rowCount)} rows` : (r.error || r.status);
+        return `<tr>
+          <td><span style="color:${color};font-weight:700">${icon}</span></td>
+          <td>${_esc(r.name)}</td>
+          <td style="color:${color}">${_esc(detail)}</td>
+        </tr>`;
+      }).join('');
+
+      progress.innerHTML = `
+        <div style="margin-bottom:8px;font-size:13px;font-weight:600">${_esc(result.message)}</div>
+        <div class="table-wrap" style="max-height:200px">
+          <table>
+            <thead><tr><th></th><th>Report</th><th>Result</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+
+      if (!result.sessionExpired) {
+        setTimeout(() => { closeFetchModal(); render(); }, 2000);
+      } else {
+        btn.disabled  = false;
+        btn.innerHTML = '<span class="material-icons-round">cloud_download</span> Fetch All Reports';
+        document.getElementById('tnrdCookieInput').value = '';
+        document.getElementById('tnrdCookieInput').focus();
+      }
+    } catch (e) {
+      progress.innerHTML = `<div class="alert alert-danger"><span class="material-icons-round">error_outline</span>${e.message}</div>`;
+      btn.disabled  = false;
+      btn.innerHTML = '<span class="material-icons-round">cloud_download</span> Fetch All Reports';
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   function _esc(v) {
     if (v === null || v === undefined) return '—';
     return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  return { render, loadAndView, exportReport, onDragOver, onDragLeave, onDrop, onFileChosen };
+  return { render, loadAndView, exportReport, onDragOver, onDragLeave, onDrop, onFileChosen,
+           openFetchModal, closeFetchModal, doFetchAll };
 })();
