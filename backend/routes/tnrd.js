@@ -1,34 +1,99 @@
 'use strict';
 const router = require('express').Router();
+const multer = require('multer');
+const XLSX   = require('xlsx');
 const { requireAuth } = require('../middleware/auth');
+const { allow }       = require('../middleware/rbac');
 const { getDb }       = require('../config/firebase');
 
 const COLLECTION = 'tnrd_reports';
 
+// ── Multer (memory, Excel only) ──────────────────────────────────────────────
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel', 'text/csv'];
+    if (ok.includes(file.mimetype) || /\.(xlsx?|csv)$/i.test(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .xlsx / .xls / .csv files are allowed.'));
+    }
+  },
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+async function deleteSubCollection(colRef, batchSize = 400) {
+  const docs = (await colRef.limit(batchSize).get()).docs;
+  await Promise.all(docs.map(d => d.ref.delete()));
+  if (docs.length >= batchSize) await deleteSubCollection(colRef, batchSize);
+}
+
+function parseExcel(buffer) {
+  const wb    = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows  = XLSX.utils.sheet_to_json(sheet, { defval: null });
+  // Normalise column names
+  return rows.map(r =>
+    Object.fromEntries(
+      Object.entries(r).map(([k, v]) => [String(k).trim(), v])
+    )
+  );
+}
+
+async function saveRows(docRef, rows) {
+  const rowsRef  = docRef.collection('rows');
+  const batchSz  = 400;
+  await deleteSubCollection(rowsRef);
+  for (let i = 0; i < rows.length; i += batchSz) {
+    const batch = getDb().batch();
+    rows.slice(i, i + batchSz).forEach((row, j) => {
+      batch.set(rowsRef.doc(String(i + j)), row);
+    });
+    await batch.commit();
+  }
+}
+
+// ── GET /api/tnrd/config  ────────────────────────────────────────────────────
+// Returns the list of expected reports from download_schedule.json so the
+// frontend knows which upload slots to show (falls back to Firestore list).
+router.get('/config', requireAuth, (_req, res) => {
+  try {
+    const cfg = require('../../scripts/download_schedule.json');
+    res.json(cfg.reports.map(r => ({
+      id:   r.id,
+      name: r.name,
+      scheduleAt: r.schedule_times || [],
+    })));
+  } catch {
+    res.json([]);
+  }
+});
+
 // ── GET /api/tnrd/reports  ───────────────────────────────────────────────────
-// Returns metadata for all downloaded reports (no row data)
 router.get('/reports', requireAuth, async (req, res, next) => {
   try {
     const snap = await getDb().collection(COLLECTION).get();
-    const reports = snap.docs.map(d => {
+    res.json(snap.docs.map(d => {
       const data = d.data();
       return {
-        id:           d.id,
-        name:         data.name || d.id,
-        status:       data.status || 'unknown',
-        downloadedAt: data.downloadedAt ? data.downloadedAt.toDate().toISOString() : null,
-        rowCount:     data.rowCount || 0,
-        scheduleAt:   data.scheduleAt || [],
-        lastError:    data.lastError || null,
+        id:            d.id,
+        name:          data.name || d.id,
+        status:        data.status || 'unknown',
+        uploadedAt:    data.uploadedAt    ? data.uploadedAt.toDate().toISOString()    : null,
+        downloadedAt:  data.downloadedAt  ? data.downloadedAt.toDate().toISOString()  : null,
+        rowCount:      data.rowCount      || 0,
+        scheduleAt:    data.scheduleAt    || [],
+        lastError:     data.lastError     || null,
         fileSizeBytes: data.fileSizeBytes || 0,
+        uploadedBy:    data.uploadedBy    || null,
       };
-    });
-    res.json(reports);
+    }));
   } catch (e) { next(e); }
 });
 
 // ── GET /api/tnrd/reports/:id  ───────────────────────────────────────────────
-// Returns metadata + all rows for one report
 router.get('/reports/:id', requireAuth, async (req, res, next) => {
   try {
     const docRef = getDb().collection(COLLECTION).doc(req.params.id);
@@ -36,46 +101,65 @@ router.get('/reports/:id', requireAuth, async (req, res, next) => {
     if (!meta.exists) return res.status(404).json({ error: 'Report not found.' });
 
     const rowsSnap = await docRef.collection('rows').orderBy('__name__').get();
-    const rows     = rowsSnap.docs.map(d => d.data());
-
-    const data = meta.data();
+    const data     = meta.data();
     res.json({
       id:           meta.id,
-      name:         data.name || meta.id,
-      status:       data.status || 'unknown',
-      downloadedAt: data.downloadedAt ? data.downloadedAt.toDate().toISOString() : null,
-      rowCount:     data.rowCount || rows.length,
-      scheduleAt:   data.scheduleAt || [],
-      lastError:    data.lastError || null,
-      rows,
+      name:         data.name          || meta.id,
+      status:       data.status        || 'unknown',
+      uploadedAt:   data.uploadedAt    ? data.uploadedAt.toDate().toISOString()   : null,
+      downloadedAt: data.downloadedAt  ? data.downloadedAt.toDate().toISOString() : null,
+      rowCount:     data.rowCount      || 0,
+      scheduleAt:   data.scheduleAt    || [],
+      lastError:    data.lastError     || null,
+      uploadedBy:   data.uploadedBy    || null,
+      rows:         rowsSnap.docs.map(d => d.data()),
     });
   } catch (e) { next(e); }
 });
 
-// ── GET /api/tnrd/reports/:id/rows  ─────────────────────────────────────────
-// Paginated rows: ?limit=100&offset=0
-router.get('/reports/:id/rows', requireAuth, async (req, res, next) => {
-  try {
-    const limit  = Math.min(parseInt(req.query.limit  || '200', 10), 1000);
-    const offset = parseInt(req.query.offset || '0', 10);
+// ── POST /api/tnrd/upload/:id  ───────────────────────────────────────────────
+// Human assistant uploads an Excel file downloaded from tnrd.tn.gov.in.
+// Allowed roles: admin, bdo (same as beneficiary bulk import).
+router.post('/upload/:id', requireAuth, allow('admin', 'bdo'),
+  upload.single('file'), async (req, res, next) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
 
-    const docRef   = getDb().collection(COLLECTION).doc(req.params.id);
-    const meta     = await docRef.get();
-    if (!meta.exists) return res.status(404).json({ error: 'Report not found.' });
+    const reportId = req.params.id;
 
-    const rowsSnap = await docRef.collection('rows')
-      .orderBy('__name__')
-      .offset(offset)
-      .limit(limit)
-      .get();
+    try {
+      const rows = parseExcel(req.file.buffer);
+      if (!rows.length) return res.status(400).json({ error: 'File is empty or unreadable.' });
 
-    res.json({
-      reportId: req.params.id,
-      offset,
-      limit,
-      rows: rowsSnap.docs.map(d => d.data()),
-    });
-  } catch (e) { next(e); }
-});
+      const db     = getDb();
+      const docRef = db.collection(COLLECTION).doc(reportId);
+
+      // Derive a display name: prefer existing Firestore name, else use filename
+      const existing = await docRef.get();
+      const name = existing.exists
+        ? (existing.data().name || reportId)
+        : (req.body.name || req.file.originalname.replace(/\.[^.]+$/, ''));
+
+      await docRef.set({
+        id:            reportId,
+        name,
+        status:        'success',
+        uploadedAt:    new Date(),
+        downloadedAt:  new Date(),
+        rowCount:      rows.length,
+        fileSizeBytes: req.file.size,
+        uploadedBy:    req.user.name || req.user.username,
+        lastError:     null,
+      }, { merge: true });
+
+      await saveRows(docRef, rows);
+
+      res.json({
+        message:  `Uploaded ${rows.length} rows for "${name}"`,
+        reportId,
+        rowCount: rows.length,
+      });
+    } catch (e) { next(e); }
+  }
+);
 
 module.exports = router;
