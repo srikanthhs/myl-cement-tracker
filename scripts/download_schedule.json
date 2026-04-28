@@ -13,6 +13,7 @@
     "multipart": true,
     "username_field": "uname",
     "password_field": "pwd",
+    "captcha_field": "captchaval",
     "password_hash": "md5",
     "fetch_csrf_first": false,
     "extra_fields": {},
