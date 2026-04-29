@@ -5,7 +5,7 @@ const XLSX   = require('xlsx');
 const { requireAuth }   = require('../middleware/auth');
 const { allow }         = require('../middleware/rbac');
 const { getDb }         = require('../config/firebase');
-const tnrdSvc           = require('../services/tnrd.service');
+const tnrdSvc = require('../services/tnrd.service');
 
 const COLLECTION = 'tnrd_reports';
 
@@ -140,19 +140,10 @@ router.post('/upload/:id', requireAuth, allow('admin', 'bdo'),
         ? (existing.data().name || reportId)
         : (req.body.name || req.file.originalname.replace(/\.[^.]+$/, ''));
 
-      await docRef.set({
-        id:            reportId,
-        name,
-        status:        'success',
-        uploadedAt:    new Date(),
-        downloadedAt:  new Date(),
-        rowCount:      rows.length,
-        fileSizeBytes: req.file.size,
-        uploadedBy:    req.user.name || req.user.username,
-        lastError:     null,
-      }, { merge: true });
-
-      await saveRows(docRef, rows);
+      await tnrdSvc.saveToFirestore(
+        reportId, name, rows, req.file.size,
+        req.user.name || req.user.username
+      );
 
       res.json({
         message:  `Uploaded ${rows.length} rows for "${name}"`,
@@ -162,6 +153,47 @@ router.post('/upload/:id', requireAuth, allow('admin', 'bdo'),
     } catch (e) { next(e); }
   }
 );
+
+// ── GET /api/tnrd/reports/:id/history  ──────────────────────────────────────
+// List available snapshot dates for one report (newest first)
+router.get('/reports/:id/history', requireAuth, async (req, res, next) => {
+  try {
+    const snap = await getDb().collection(COLLECTION).doc(req.params.id)
+      .collection('history').orderBy('snapshotDate', 'desc').get();
+    res.json(snap.docs.map(d => {
+      const data = d.data();
+      return {
+        date:       d.id,
+        rowCount:   data.rowCount   || 0,
+        uploadedBy: data.uploadedBy || null,
+        fetchedAt:  data.downloadedAt ? data.downloadedAt.toDate().toISOString() : null,
+      };
+    }));
+  } catch (e) { next(e); }
+});
+
+// ── GET /api/tnrd/reports/:id/history/:date  ─────────────────────────────────
+// Get full rows for a specific snapshot date (YYYY-MM-DD)
+router.get('/reports/:id/history/:date', requireAuth, async (req, res, next) => {
+  try {
+    const snapRef = getDb().collection(COLLECTION).doc(req.params.id)
+      .collection('history').doc(req.params.date);
+    const meta = await snapRef.get();
+    if (!meta.exists) return res.status(404).json({ error: 'Snapshot not found for this date.' });
+
+    const rowsSnap = await snapRef.collection('rows').orderBy('__name__').get();
+    const data     = meta.data();
+    res.json({
+      date:       req.params.date,
+      reportId:   req.params.id,
+      name:       data.name       || req.params.id,
+      rowCount:   data.rowCount   || 0,
+      uploadedBy: data.uploadedBy || null,
+      fetchedAt:  data.downloadedAt ? data.downloadedAt.toDate().toISOString() : null,
+      rows:       rowsSnap.docs.map(d => d.data()),
+    });
+  } catch (e) { next(e); }
+});
 
 // ── POST /api/tnrd/fetch-all  ────────────────────────────────────────────────
 // One-click: backend downloads all reports using the provided session cookie.

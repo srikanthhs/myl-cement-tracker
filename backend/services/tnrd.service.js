@@ -1,65 +1,57 @@
 'use strict';
 /**
  * TNRD download service – runs inside Express (Node.js).
- * Uses a PHPSESSID session cookie to download Excel reports from
- * tnrd.tn.gov.in and stores rows in Firestore.
+ *
+ * Firestore layout
+ * ────────────────
+ * tnrd_reports/{reportId}                   latest metadata (always overwritten)
+ * tnrd_reports/{reportId}/rows/{n}          latest rows    (always overwritten)
+ * tnrd_reports/{reportId}/history/{dateKey} snapshot metadata per fetch date
+ * tnrd_reports/{reportId}/history/{dateKey}/rows/{n}  snapshot rows
+ *
+ * dateKey format: YYYY-MM-DD  (one snapshot per report per day; re-fetch
+ * overwrites that day's snapshot so the latest of the day is kept)
  */
 
-const https    = require('https');
-const http     = require('http');
-const url      = require('url');
-const XLSX     = require('xlsx');
+const https     = require('https');
+const http      = require('http');
+const urlModule = require('url');
+const XLSX      = require('xlsx');
 const { getDb } = require('../config/firebase');
 
 const COLLECTION = 'tnrd_reports';
 const BASE_URL   = 'https://tnrd.tn.gov.in';
 
-// ── HTTP helper (no external deps) ───────────────────────────────────────────
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
 function httpGet(targetUrl, cookieStr, redirects = 5) {
   return new Promise((resolve, reject) => {
     if (redirects < 0) return reject(new Error('Too many redirects'));
-
-    const parsed  = new url.URL(targetUrl);
+    const parsed  = new urlModule.URL(targetUrl);
     const isHttps = parsed.protocol === 'https:';
     const lib     = isHttps ? https : http;
-
     const options = {
       hostname: parsed.hostname,
       port:     parsed.port || (isHttps ? 443 : 80),
       path:     parsed.pathname + parsed.search,
       method:   'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/147.0.0.0',
         'Cookie':     cookieStr,
         'Referer':    BASE_URL + '/',
-        'Accept':     'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept':     'text/html,application/xhtml+xml,*/*;q=0.8',
       },
     };
-
     const req = lib.request(options, res => {
-      // Follow redirects
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+      if ([301,302,303,307,308].includes(res.statusCode) && res.headers.location) {
         const next = res.headers.location.startsWith('http')
-          ? res.headers.location
-          : BASE_URL + res.headers.location;
-        // Carry any new cookies from redirect
-        const newCookies = res.headers['set-cookie']
-          ?.map(c => c.split(';')[0]).join('; ') || '';
-        const merged = newCookies
-          ? cookieStr + '; ' + newCookies
-          : cookieStr;
-        return resolve(httpGet(next, merged, redirects - 1));
+          ? res.headers.location : BASE_URL + res.headers.location;
+        const extra = (res.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+        return resolve(httpGet(next, extra ? cookieStr + '; ' + extra : cookieStr, redirects - 1));
       }
-
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({
-        status:      res.statusCode,
-        headers:     res.headers,
-        body:        Buffer.concat(chunks),
-      }));
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
     });
-
     req.on('error', reject);
     req.setTimeout(60000, () => { req.destroy(); reject(new Error('Request timed out')); });
     req.end();
@@ -68,41 +60,31 @@ function httpGet(targetUrl, cookieStr, redirects = 5) {
 
 function httpPost(targetUrl, cookieStr, formData) {
   return new Promise((resolve, reject) => {
-    const parsed  = new url.URL(targetUrl);
-    const isHttps = parsed.protocol === 'https:';
-    const lib     = isHttps ? https : http;
-
-    // Build multipart/form-data body
+    const parsed   = new urlModule.URL(targetUrl);
+    const isHttps  = parsed.protocol === 'https:';
+    const lib      = isHttps ? https : http;
     const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);
     const parts    = Object.entries(formData).map(([k, v]) =>
-      `--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}`
-    );
+      `--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}`);
     const body = Buffer.from(parts.join('\r\n') + `\r\n--${boundary}--\r\n`);
-
     const options = {
       hostname: parsed.hostname,
       port:     parsed.port || (isHttps ? 443 : 80),
       path:     parsed.pathname + parsed.search,
       method:   'POST',
       headers: {
-        'User-Agent':    'Mozilla/5.0 Chrome/147.0.0.0',
-        'Cookie':        cookieStr,
-        'Content-Type':  `multipart/form-data; boundary=${boundary}`,
+        'User-Agent':     'Mozilla/5.0 Chrome/147.0.0.0',
+        'Cookie':         cookieStr,
+        'Content-Type':   `multipart/form-data; boundary=${boundary}`,
         'Content-Length': body.length,
-        'Referer':       BASE_URL + '/',
+        'Referer':        BASE_URL + '/',
       },
     };
-
     const req = lib.request(options, res => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({
-        status:  res.statusCode,
-        headers: res.headers,
-        body:    Buffer.concat(chunks),
-      }));
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
     });
-
     req.on('error', reject);
     req.setTimeout(60000, () => { req.destroy(); reject(new Error('Request timed out')); });
     req.write(body);
@@ -110,7 +92,6 @@ function httpPost(targetUrl, cookieStr, formData) {
   });
 }
 
-// ── Check if response is the login page (session expired) ────────────────────
 function isLoginPage(res) {
   const ct = res.headers['content-type'] || '';
   if (!ct.includes('html')) return false;
@@ -121,53 +102,55 @@ function isLoginPage(res) {
 
 // ── Download one report ───────────────────────────────────────────────────────
 async function downloadReport(reportCfg, cookieStr) {
-  const today    = _fmtDate(new Date(), reportCfg.date_format || '%d-%m-%Y');
-  const sub      = v => (typeof v === 'string' ? v.replace('{today}', today) : v);
-
-  const params   = Object.fromEntries(
-    Object.entries(reportCfg.params || {}).map(([k, v]) => [k, sub(v)])
-  );
-  const formData = Object.fromEntries(
-    Object.entries(reportCfg.form_data || {}).map(([k, v]) => [k, sub(v)])
-  );
-
-  const qs     = new url.URLSearchParams(params).toString();
+  const today   = _fmtDate(new Date(), reportCfg.date_format || '%d-%m-%Y');
+  const sub     = v => (typeof v === 'string' ? v.replace('{today}', today) : v);
+  const params  = Object.fromEntries(Object.entries(reportCfg.params  || {}).map(([k,v]) => [k, sub(v)]));
+  const form    = Object.fromEntries(Object.entries(reportCfg.form_data || {}).map(([k,v]) => [k, sub(v)]));
+  const qs      = new urlModule.URLSearchParams(params).toString();
   const fullUrl = reportCfg.url + (qs ? '?' + qs : '');
   const method  = (reportCfg.method || 'GET').toUpperCase();
-
-  const res = method === 'POST'
-    ? await httpPost(fullUrl, cookieStr, formData)
-    : await httpGet(fullUrl, cookieStr);
-
-  if (isLoginPage(res)) {
-    throw new Error('SESSION_EXPIRED');
-  }
-
-  if (res.status !== 200) {
-    throw new Error(`Server returned HTTP ${res.status} for ${reportCfg.name}`);
-  }
-
+  const res     = method === 'POST' ? await httpPost(fullUrl, cookieStr, form) : await httpGet(fullUrl, cookieStr);
+  if (isLoginPage(res))   throw new Error('SESSION_EXPIRED');
+  if (res.status !== 200) throw new Error(`HTTP ${res.status} for "${reportCfg.name}"`);
   return res.body;
 }
 
-// ── Parse Excel buffer → array of row objects ─────────────────────────────────
+// ── Parse Excel ───────────────────────────────────────────────────────────────
 function parseExcel(buffer) {
   const wb    = XLSX.read(buffer, { type: 'buffer', cellDates: true });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const rows  = XLSX.utils.sheet_to_json(sheet, { defval: null });
-  return rows.map(r =>
-    Object.fromEntries(Object.entries(r).map(([k, v]) => [String(k).trim(), v]))
-  );
+  return rows.map(r => Object.fromEntries(Object.entries(r).map(([k,v]) => [String(k).trim(), v])));
 }
 
-// ── Save rows to Firestore ────────────────────────────────────────────────────
+// ── Batch-write rows into a Firestore sub-collection ─────────────────────────
+async function _writeRows(rowsRef, rows) {
+  // Delete existing docs first
+  const existing = await rowsRef.listDocuments();
+  const db       = getDb();
+  let b = db.batch(); let c = 0;
+  for (const ref of existing) {
+    b.delete(ref);
+    if (++c % 400 === 0) { await b.commit(); b = db.batch(); c = 0; }
+  }
+  if (c > 0) await b.commit();
+
+  // Write new rows
+  for (let i = 0; i < rows.length; i += 400) {
+    const batch = db.batch();
+    rows.slice(i, i + 400).forEach((row, j) => batch.set(rowsRef.doc(String(i + j)), row));
+    await batch.commit();
+  }
+}
+
+// ── Save to Firestore (latest + dated snapshot) ───────────────────────────────
 async function saveToFirestore(reportId, reportName, rows, fileSizeBytes, fetchedBy) {
   const db      = getDb();
   const docRef  = db.collection(COLLECTION).doc(reportId);
-  const rowsRef = docRef.collection('rows');
   const now     = new Date();
+  const dateKey = _isoDate(now);   // e.g. "2026-04-29"
 
-  await docRef.set({
+  const meta = {
     id:            reportId,
     name:          reportName,
     status:        'success',
@@ -177,27 +160,20 @@ async function saveToFirestore(reportId, reportName, rows, fileSizeBytes, fetche
     fileSizeBytes,
     uploadedBy:    fetchedBy || 'system',
     lastError:     null,
-  }, { merge: true });
+    latestDate:    dateKey,
+  };
 
-  // Delete old rows
-  let batch = db.batch();
-  let count = 0;
-  const old = await rowsRef.listDocuments();
-  for (const ref of old) {
-    batch.delete(ref);
-    if (++count % 400 === 0) { await batch.commit(); batch = db.batch(); count = 0; }
-  }
-  if (count > 0) await batch.commit();
+  // 1. Overwrite latest
+  await docRef.set(meta, { merge: true });
+  await _writeRows(docRef.collection('rows'), rows);
 
-  // Write new rows in batches of 400
-  for (let i = 0; i < rows.length; i += 400) {
-    const b = db.batch();
-    rows.slice(i, i + 400).forEach((row, j) => b.set(rowsRef.doc(String(i + j)), row));
-    await b.commit();
-  }
+  // 2. Save dated snapshot (overwrites same-day snapshot if re-fetched)
+  const snapRef = docRef.collection('history').doc(dateKey);
+  await snapRef.set({ ...meta, snapshotDate: dateKey });
+  await _writeRows(snapRef.collection('rows'), rows);
 }
 
-// ── Public: fetch all enabled reports with a given session cookie ─────────────
+// ── Public: fetch all reports ─────────────────────────────────────────────────
 async function fetchAllReports(sessionCookie, reportConfigs, fetchedBy) {
   const cookieStr = `PHPSESSID=${sessionCookie}`;
   const results   = [];
@@ -207,7 +183,6 @@ async function fetchAllReports(sessionCookie, reportConfigs, fetchedBy) {
       results.push({ id: cfg.id, name: cfg.name, status: 'skipped' });
       continue;
     }
-
     try {
       const buffer = await downloadReport(cfg, cookieStr);
       const rows   = parseExcel(buffer);
@@ -215,27 +190,26 @@ async function fetchAllReports(sessionCookie, reportConfigs, fetchedBy) {
       results.push({ id: cfg.id, name: cfg.name, status: 'success', rowCount: rows.length });
     } catch (err) {
       if (err.message === 'SESSION_EXPIRED') {
-        // Stop immediately — all subsequent requests will also fail
         results.push({ id: cfg.id, name: cfg.name, status: 'error', error: 'Session expired' });
-        for (const r of reportConfigs.slice(reportConfigs.indexOf(cfg) + 1)) {
-          results.push({ id: r.id, name: r.name, status: 'skipped', error: 'Stopped — session expired' });
-        }
+        reportConfigs.slice(reportConfigs.indexOf(cfg) + 1).forEach(r =>
+          results.push({ id: r.id, name: r.name, status: 'skipped', error: 'Stopped — session expired' })
+        );
         break;
       }
       results.push({ id: cfg.id, name: cfg.name, status: 'error', error: err.message });
     }
   }
-
   return results;
 }
 
-// ── Date format helper (%d-%m-%Y style) ───────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function _fmtDate(d, fmt) {
   const pad = n => String(n).padStart(2, '0');
-  return fmt
-    .replace('%d', pad(d.getDate()))
-    .replace('%m', pad(d.getMonth() + 1))
-    .replace('%Y', d.getFullYear());
+  return fmt.replace('%d', pad(d.getDate())).replace('%m', pad(d.getMonth()+1)).replace('%Y', d.getFullYear());
 }
 
-module.exports = { fetchAllReports };
+function _isoDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+module.exports = { fetchAllReports, saveToFirestore, parseExcel };
