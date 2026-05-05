@@ -36,7 +36,7 @@ const USERS = [
     role:'engineer', block:'Mayiladuthurai', panchayats:null,
     name:'K. Arumugam', designation:'AE/JE – Mayiladuthurai Block',
     dept:'Rural Development Dept, Mayiladuthurai', mobile:'9400001005',
-    avatarColor:'inspector', icon:'engineering' },
+    avatarColor:'engineer', icon:'engineering' },
 
   // Mayiladuthurai Overseers
   { id:'MYL-OV1', username:'r.kayalvizhi', password:'kayalvizhi2025',
@@ -96,7 +96,7 @@ const USERS = [
     role:'engineer', block:'Sirkali', panchayats:null,
     name:'P. Suresh', designation:'AE/JE – Sirkali Block',
     dept:'Rural Development Dept, Sirkali', mobile:'9400002005',
-    avatarColor:'inspector', icon:'engineering' },
+    avatarColor:'engineer', icon:'engineering' },
 
   // ── Sembanarkoil Block ────────────────────────────────────────────────────
   { id:'U301', username:'bdo.sbn', password:'bdo.sbn2025',
@@ -118,7 +118,7 @@ const USERS = [
     role:'engineer', block:'Sembanarkoil', panchayats:null,
     name:'R. Mani', designation:'AE/JE – Sembanarkoil Block',
     dept:'Rural Development Dept, Sembanarkoil', mobile:'9400003005',
-    avatarColor:'inspector', icon:'engineering' },
+    avatarColor:'engineer', icon:'engineering' },
 
   // ── Kuthalam Block ────────────────────────────────────────────────────────
   { id:'U401', username:'bdo.ktl', password:'bdo.ktl2025',
@@ -140,7 +140,7 @@ const USERS = [
     role:'engineer', block:'Kuthalam', panchayats:null,
     name:'G. Balan', designation:'AE/JE – Kuthalam Block',
     dept:'Rural Development Dept, Kuthalam', mobile:'9400004005',
-    avatarColor:'inspector', icon:'engineering' },
+    avatarColor:'engineer', icon:'engineering' },
 
   // ── Papanasam Block ───────────────────────────────────────────────────────
   { id:'U501', username:'bdo.ppn', password:'bdo.ppn2025',
@@ -153,11 +153,16 @@ const USERS = [
     name:'K. Muthukrishnan', designation:'Store Keeper – Papanasam Depot',
     dept:'Rural Development Dept, Papanasam', mobile:'9400005003',
     avatarColor:'store', icon:'warehouse' },
+  { id:'U504', username:'inspector.ppn', password:'insp.ppn2025',
+    role:'inspector', block:'Papanasam', panchayats:null,
+    name:'L. Vanitha', designation:'Field Inspector – Papanasam',
+    dept:'Rural Development Dept, Papanasam', mobile:'9400005004',
+    avatarColor:'inspector', icon:'fact_check' },
   { id:'U505', username:'engineer.ppn', password:'eng.ppn2025',
     role:'engineer', block:'Papanasam', panchayats:null,
     name:'S. Kannan', designation:'AE/JE – Papanasam Block',
     dept:'Rural Development Dept, Papanasam', mobile:'9400005005',
-    avatarColor:'inspector', icon:'engineering' },
+    avatarColor:'engineer', icon:'engineering' },
 ];
 
 function findByCredentials(username, password) {
