@@ -22,7 +22,15 @@
       "Bash(cmd /c \"taskkill /PID 25280 /F\")",
       "Bash(wmic process *)",
       "PowerShell(Stop-Process -Id 25280 -Force)",
-      "PowerShell(Test-NetConnection -ComputerName localhost -Port 3000 -InformationLevel Quiet)"
+      "PowerShell(Test-NetConnection -ComputerName localhost -Port 3000 -InformationLevel Quiet)",
+      "Bash(xargs grep *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(gh pr *)",
+      "Bash(gh auth *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(git push *)"
     ]
   }
 }

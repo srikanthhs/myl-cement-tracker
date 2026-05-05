@@ -75,6 +75,30 @@ const UI = (() => {
     engineer: ['dashboard','allotments','stock','reports','tnrd','beneficiaries','alerts'],
   };
 
+  // Bottom nav shows the 5 most relevant pages for the role
+  const BOTTOM_NAV_PAGES = {
+    admin:    ['dashboard','issuance','beneficiaries','stock','alerts'],
+    bdo:      ['dashboard','beneficiaries','allotments','reports','alerts'],
+    overseer: ['dashboard','allotments','beneficiaries','reports','alerts'],
+    store:    ['dashboard','issuance','stock','alerts'],
+    inspector:['dashboard','alerts'],
+    engineer: ['dashboard','allotments','stock','reports','alerts'],
+  };
+
+  function buildBottomNav() {
+    const user  = Auth.getUser();
+    if (!user) return;
+    const el    = document.getElementById('bottomNav');
+    if (!el) return;
+    const pages = BOTTOM_NAV_PAGES[user.role] || ['dashboard'];
+    el.innerHTML = pages.map(p => `
+      <button class="bottom-nav-item ${Router.currentPage() === p ? 'active' : ''}"
+        id="bnav_${p}" onclick="Router.navigate('${p}')">
+        <span class="material-icons-round">${PAGE_META[p]?.icon || 'circle'}</span>
+        <span>${PAGE_META[p]?.label?.split(' ')[0] || p}</span>
+      </button>`).join('');
+  }
+
   function buildSidebar() {
     const user  = Auth.getUser();
     if (!user) return;
@@ -107,16 +131,31 @@ const UI = (() => {
         </button>
       </div>
     `;
+    buildBottomNav();
   }
 
   function setActiveNav(page) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     const nav = document.getElementById(`nav_${page}`);
     if (nav) nav.classList.add('active');
+
+    // sync bottom nav
+    document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+    const bnav = document.getElementById(`bnav_${page}`);
+    if (bnav) bnav.classList.add('active');
+
+    // close sidebar on mobile after navigation
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar')?.classList.remove('open');
+      document.getElementById('sidebarBackdrop')?.classList.remove('open');
+    }
   }
 
   function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
+    const sidebar  = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    sidebar.classList.toggle('open');
+    backdrop?.classList.toggle('open', sidebar.classList.contains('open'));
   }
 
   // ── Photo capture (shared) ───────────────────────────────────
@@ -197,7 +236,7 @@ const UI = (() => {
 
   return {
     showToast, openModal, openModalWithButtons, closeModal, closeModalOutside,
-    buildSidebar, setActiveNav, toggleSidebar,
+    buildSidebar, buildBottomNav, setActiveNav, toggleSidebar,
     handlePhotoCapture, initPhotoCapture, getPhotos, viewPhoto,
     captureGPS, printZone, skeletonRows,
   };

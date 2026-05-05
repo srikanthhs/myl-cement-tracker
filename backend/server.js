@@ -22,7 +22,8 @@ app.use(helmet({
       fontSrc:         ["'self'", 'fonts.gstatic.com'],
       imgSrc:          ["'self'", 'data:', 'blob:'],
       connectSrc:      ["'self'", '*.googleapis.com', '*.firebaseio.com',
-                        'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'],  // allow sourcemap fetches
+                        'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'],
+      workerSrc:       ["'self'"],
     }
   }
 }));

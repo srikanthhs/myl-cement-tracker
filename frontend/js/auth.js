@@ -69,6 +69,7 @@ const Auth = (() => {
   function can(action) {
     if (!_user) return false;
     if (_user.role === 'admin') return true;
+    // Keep in sync with backend/middleware/rbac.js DEFAULT_PERMISSIONS
     const perms = {
       createAllotment:  ['admin','bdo','overseer'],
       approveAllotment: ['admin','bdo'],

@@ -1,0 +1,40 @@
+{
+  "name": "MYL Cement Tracker",
+  "short_name": "Cement POS",
+  "description": "Cement Distribution Management – Rural Development Dept, Mayiladuthurai",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1a73e8",
+  "background_color": "#f8f9fa",
+  "categories": ["government", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Issue Cement",
+      "short_name": "Issue",
+      "url": "/#issuance",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Stock",
+      "short_name": "Stock",
+      "url": "/#stock",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    }
+  ]
+}

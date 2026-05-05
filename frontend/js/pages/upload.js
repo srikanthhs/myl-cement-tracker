@@ -20,7 +20,7 @@ const UploadPage = (() => {
           <div class="form-group">
             <label class="form-label">Block</label>
             <select class="form-control" id="up_block">
-              ${['Mayiladuthurai','Sirkali','Sembanarkoil','Kuthalam','Papanasam'].map(b=>
+              ${['Mayiladuthurai','Sirkali','Sembanarkoil','Kuthalam','Papanasam','Sirkazhi','Tarangambadi'].map(b=>
                 `<option ${user.block===b?'selected':''}>${b}</option>`).join('')}
             </select>
           </div>

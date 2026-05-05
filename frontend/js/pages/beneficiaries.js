@@ -17,7 +17,7 @@ const BeneficiariesPage = (() => {
           <div class="search-input" style="flex:1;min-width:200px"><span class="material-icons-round">search</span><input id="benSearch" placeholder="Search name, village, work ID…" oninput="BeneficiariesPage.filter()"></div>
           <select class="form-control" style="width:160px" id="benBlockF" onchange="BeneficiariesPage.filter()">
             <option value="">All Blocks</option>
-            ${['Mayiladuthurai','Sirkali','Sembanarkoil','Kuthalam','Papanasam'].map(b=>`<option>${b}</option>`).join('')}
+            ${['Mayiladuthurai','Sirkali','Sembanarkoil','Kuthalam','Papanasam','Sirkazhi','Tarangambadi'].map(b=>`<option>${b}</option>`).join('')}
           </select>
           <select class="form-control" style="width:120px" id="benSchemeF" onchange="BeneficiariesPage.filter()">
             <option value="">All Schemes</option>

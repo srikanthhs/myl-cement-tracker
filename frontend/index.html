@@ -2,12 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MYL Cement Tracker – Rural Development Department</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='20' font-size='20'>🏗️</text></svg>">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon.svg">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a73e8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cement POS">
+<meta name="description" content="Cement Distribution Management – Rural Development Dept, Mayiladuthurai">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Display:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<meta name="theme-color" content="#1a73e8">
 <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
@@ -105,6 +112,19 @@
 
 <!-- ═══ MAIN APP ═══ -->
 <div id="mainApp" class="hidden">
+  <!-- PWA install banner -->
+  <div id="pwaInstallBanner">
+    <span class="material-icons-round" style="color:var(--md-primary)">add_to_home_screen</span>
+    <span>Install as app for offline access</span>
+    <button class="btn btn-primary btn-sm" style="margin-left:auto" id="pwaInstallBtn">Install</button>
+    <button class="nav-icon-btn" onclick="document.getElementById('pwaInstallBanner').classList.remove('show')">
+      <span class="material-icons-round" style="font-size:18px">close</span>
+    </button>
+  </div>
+
+  <!-- Printer status bar (mobile) -->
+  <div id="printerStatusBar"></div>
+
   <!-- Top App Bar -->
   <div class="app-bar">
     <div class="app-bar-left">
@@ -158,6 +178,12 @@
 <!-- Print Zone -->
 <div class="print-zone hidden" id="printZone"></div>
 
+<!-- Sidebar backdrop (mobile overlay) -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="UI.toggleSidebar()"></div>
+
+<!-- Bottom Navigation (mobile POS) -->
+<nav class="bottom-nav" id="bottomNav"></nav>
+
 <!-- CDN dependencies -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -169,6 +195,8 @@
 <script src="/js/auth.js"></script>
 <script src="/js/ui.js"></script>
 <script src="/js/exporter.js"></script>
+<script src="/js/scanner.js"></script>
+<script src="/js/printer.js"></script>
 <script src="/js/pages/dashboard.js"></script>
 <script src="/js/pages/beneficiaries.js"></script>
 <script src="/js/pages/allotments.js"></script>
@@ -181,5 +209,35 @@
 <script src="/js/pages/settings.js"></script>
 <script src="/js/pages/users.js"></script>
 <script src="/js/app.js"></script>
+
+<script>
+// ── Service Worker registration ──────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+// ── PWA install prompt ───────────────────────────────────────
+let _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  document.getElementById('pwaInstallBanner')?.classList.add('show');
+});
+document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  const { outcome } = await _pwaPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('pwaInstallBanner')?.classList.remove('show');
+  }
+  _pwaPrompt = null;
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwaInstallBanner')?.classList.remove('show');
+});
+</script>
 </body>
 </html>

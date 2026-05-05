@@ -64,6 +64,7 @@ const UsersPage = (() => {
 
     const ACTIONS = ['createAllotment','approveAllotment','editAllotment','engineerVerify','issueCement','addStock','viewReports','manageUsers','viewBeneficiary','editBeneficiary','fieldInspect'];
     const ROLES   = ['admin','bdo','overseer','store','inspector','engineer'];
+    // Keep in sync with backend/middleware/rbac.js DEFAULT_PERMISSIONS
     const DEFAULT_PERMISSIONS = {
       createAllotment:['admin','bdo','overseer'], approveAllotment:['admin','bdo'],
       editAllotment:['admin','bdo','overseer'],   engineerVerify:['admin','engineer'],

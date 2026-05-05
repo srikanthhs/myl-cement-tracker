@@ -87,9 +87,31 @@ const IssuancePage = (() => {
       <div class="info-row"><span class="info-key">GPS</span><span class="info-val">${i.gps?`${i.gps.lat}, ${i.gps.lng}`:'Not captured'}</span></div>
       ${i.photos?.length?`<hr class="divider"><div class="section-title">Photos</div><div class="photo-grid">${i.photos.map(p=>`<img src="${p}" class="photo-thumb">`).join('')}</div>`:''}
     `,[
-      {label:'Close',      cls:'btn-outlined', fn:'UI.closeModal()'},
-      {label:'Print Slip', cls:'btn-primary',  fn:`IssuancePage.printSlip('${i.id}')`},
+      {label:'Close',         cls:'btn-outlined', fn:'UI.closeModal()'},
+      {label:'BT Print',      cls:'btn-outlined', fn:`Printer.printReceipt(${JSON.stringify(i).replace(/"/g,"'")})`},
+      {label:'Print / PDF',   cls:'btn-primary',  fn:`IssuancePage.printSlip('${i.id}')`},
     ]);
+  }
+
+  function _scanBeneficiary() {
+    Scanner.scan(value => {
+      const match = _allots.find(a =>
+        a.status === 'Approved' && (
+          (a.workId   && a.workId.toLowerCase()   === value.toLowerCase()) ||
+          (a.id       && a.id.toLowerCase()        === value.toLowerCase()) ||
+          (a.beneficiaryName && a.beneficiaryName.toLowerCase().includes(value.toLowerCase()))
+        )
+      );
+      if (match) {
+        const sel = document.getElementById('if_allot');
+        if (sel) { sel.value = match.id; UI.showToast(`Matched: ${match.beneficiaryName}`, 'success'); }
+      } else {
+        // put scanned value into received-by as fallback
+        const rcvd = document.getElementById('if_rcvd');
+        if (rcvd) rcvd.value = value;
+        UI.showToast('No allotment matched – ID placed in Received By', 'info');
+      }
+    });
   }
 
   function openIssueModal() {
@@ -98,6 +120,11 @@ const IssuancePage = (() => {
     _gps=null; _photos=[];
     const opts = readyAllots.map(a=>`<option value="${a.id}">${a.beneficiaryName} – ${a.village} (${fmt(a.bags)} bags)</option>`).join('');
     UI.openModalWithButtons('Issue Cement',`
+      <div style="margin-bottom:12px">
+        <button class="btn btn-outlined" onclick="IssuancePage._scanBeneficiary()" style="width:100%;justify-content:center">
+          <span class="material-icons-round">qr_code_scanner</span> Scan Beneficiary ID
+        </button>
+      </div>
       <div class="form-grid">
         <div class="form-group" style="grid-column:1/-1"><label class="form-label">Allotment *</label><select class="form-control" id="if_allot">${opts}</select></div>
         <div class="form-group"><label class="form-label">Bags to Issue *</label><input class="form-control" type="number" id="if_bags" placeholder="Enter bag count" min="1"></div>
@@ -150,14 +177,40 @@ const IssuancePage = (() => {
     if(!_photos.length){UI.showToast('At least one photo is required','error');return;}
     if(!_gps){UI.showToast('GPS location is required','error');return;}
     try{
-      await API.post('/issuance',{
+      const issued = await API.post('/issuance',{
         allotmentId:document.getElementById('if_allot').value, bags,
         receivedBy:document.getElementById('if_rcvd').value,
         remarks:document.getElementById('if_remarks').value,
         photos:_photos, gps:_gps,
       });
-      UI.showToast('Cement issued successfully!');UI.closeModal();render();
+      UI.closeModal();
+      render();
+      // Offer print options after successful issuance
+      _offerPrint(issued || { bags, gps: _gps });
     }catch(e){UI.showToast(e.message,'error');}
+  }
+
+  function _offerPrint(issuance) {
+    UI.openModalWithButtons('Cement Issued ✓', `
+      <div style="text-align:center;padding:12px 0 8px">
+        <span class="material-icons-round" style="font-size:56px;color:var(--green)">check_circle</span>
+        <div style="font-size:20px;font-weight:700;margin-top:8px">${fmt(issuance.bags)} Bags Issued</div>
+        ${issuance.challanNo ? `<div style="font-size:13px;color:var(--grey-700);margin-top:4px">Challan: <strong>${issuance.challanNo}</strong></div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <button class="btn btn-outlined" style="justify-content:center" onclick="IssuancePage._btPrint(${JSON.stringify(issuance).replace(/"/g,'&quot;')})">
+          <span class="material-icons-round">print</span> Print via Bluetooth
+        </button>
+        <button class="btn btn-text" style="justify-content:center" onclick="IssuancePage.printSlip('${issuance.id||''}')">
+          <span class="material-icons-round">picture_as_pdf</span> Print / Save as PDF
+        </button>
+      </div>`,
+      [{ label:'Done', cls:'btn-primary', fn: UI.closeModal }]
+    );
+  }
+
+  async function _btPrint(issuance) {
+    await Printer.printReceipt(issuance);
   }
 
   function printSlip(id) {
@@ -195,5 +248,5 @@ const IssuancePage = (() => {
       </div>`);
   }
 
-  return { render, view, openIssueModal, printSlip, exportExcel, exportPDF, _onPhoto, _captureGPS };
+  return { render, view, openIssueModal, printSlip, exportExcel, exportPDF, _onPhoto, _captureGPS, _scanBeneficiary, _btPrint };
 })();
