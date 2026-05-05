@@ -983,3 +983,203 @@ tfoot tr td { background: var(--md-primary-container); color: var(--md-on-primar
   .print-zone, .print-zone * { visibility: visible; }
   .print-zone { position: fixed; inset: 0; background: #fff; }
 }
+
+/* ════════════════════════════════════════════════════════════
+   PWA / MOBILE POS ENHANCEMENTS
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Bottom Navigation Bar (mobile only) ───────────────────── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--md-surface);
+  border-top: 1px solid var(--md-outline);
+  z-index: 100;
+  align-items: stretch;
+  justify-content: space-around;
+  box-shadow: 0 -2px 8px rgba(60,64,67,.12);
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: var(--shape-md);
+  color: var(--md-on-surface-variant);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .3px;
+  transition: background .15s, color .15s;
+  position: relative;
+  min-width: 48px;
+}
+.bottom-nav-item .material-icons-round { font-size: 22px; }
+.bottom-nav-item.active {
+  color: var(--md-primary);
+}
+.bottom-nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 32px;
+  background: var(--md-primary-container);
+  border-radius: var(--shape-full);
+  z-index: -1;
+}
+.bottom-nav-item:active { background: var(--state-press); }
+
+/* ── Sidebar overlay backdrop (mobile) ─────────────────────── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 49;
+}
+.sidebar-backdrop.open { display: block; }
+
+/* ── Printer status bar ─────────────────────────────────────── */
+#printerStatusBar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--md-surface-variant);
+  border-bottom: 1px solid var(--md-outline);
+  font-size: 12px;
+}
+
+/* ── QR Scanner overlay ─────────────────────────────────────── */
+#scannerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+#scannerOverlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.scanner-sheet {
+  background: var(--md-surface);
+  border-radius: var(--shape-xl) var(--shape-xl) 0 0;
+  width: 100%;
+  padding: 0 0 16px;
+  transform: translateY(40px);
+  transition: transform .3s cubic-bezier(.2,0,0,1);
+}
+#scannerOverlay.open .scanner-sheet {
+  transform: translateY(0);
+}
+.scanner-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--md-outline);
+}
+.scanner-header .material-icons-round { color: var(--md-primary); }
+.scanner-header .nav-icon-btn { margin-left: auto; }
+#qr-reader {
+  width: 100%;
+  max-height: 280px;
+  overflow: hidden;
+  background: #000;
+}
+#qr-reader video { width: 100% !important; height: auto !important; }
+#qr-reader img   { display: none !important; }
+.scanner-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--md-on-surface-variant);
+  padding: 8px 20px;
+}
+.scanner-manual {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 0;
+  align-items: center;
+}
+
+/* ── PWA install banner ─────────────────────────────────────── */
+#pwaInstallBanner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--md-primary-container);
+  border-bottom: 1px solid var(--md-outline);
+  font-size: 13px;
+  color: var(--md-on-primary-container);
+}
+#pwaInstallBanner.show { display: flex; }
+
+/* ── Mobile touch improvements ──────────────────────────────── */
+@media (max-width: 768px) {
+  /* Show bottom nav, adjust content padding */
+  .bottom-nav       { display: flex; }
+  .main             { padding-bottom: calc(64px + env(safe-area-inset-bottom) + 12px); }
+  .toast            { bottom: calc(72px + env(safe-area-inset-bottom)); }
+
+  /* Bigger touch targets */
+  .btn              { min-height: 44px; }
+  .btn-sm           { min-height: 36px; }
+  .form-control     { min-height: 48px; font-size: 16px; } /* prevents zoom on iOS */
+  .nav-icon-btn     { width: 44px; height: 44px; }
+
+  /* Stat grid: 2 columns on tablet, then stacks */
+  .stat-val         { font-size: 24px; }
+
+  /* Printer bar visible on mobile */
+  #printerStatusBar { display: flex; }
+
+  /* Page header: tighter on mobile */
+  .page-title       { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  /* Full-screen scanner on very small phones */
+  #scannerOverlay   { align-items: stretch; }
+  .scanner-sheet    { border-radius: 0; height: 100%; display: flex; flex-direction: column; }
+  #qr-reader        { flex: 1; max-height: none; }
+
+  /* Tighten modal on small phones */
+  .modal-header     { padding: 16px 16px 0; }
+  .modal-footer     { flex-direction: column; }
+  .modal-footer .btn{ width: 100%; justify-content: center; }
+
+  /* Single-column stat grid */
+  .stat-card        { padding: 14px; }
+  .stat-icon        { width: 40px; height: 40px; }
+}
+
+/* ── Standalone PWA chrome adjustments ─────────────────────── */
+@media (display-mode: standalone) {
+  .app-bar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(64px + env(safe-area-inset-top));
+  }
+  .layout    { margin-top: calc(64px + env(safe-area-inset-top)); }
+  .sidebar   { top: calc(64px + env(safe-area-inset-top)); }
+}
