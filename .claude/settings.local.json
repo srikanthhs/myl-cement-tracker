@@ -29,7 +29,8 @@
       "Bash(gh auth *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(git push *)"
     ]
   }
 }
